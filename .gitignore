@@ -1,0 +1,15 @@
+# Flutter/Dart build artifacts
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+backend/.dart_tool/
+
+# Backend data — don't commit real records or uploaded invoices
+backend/data/*.db
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# OS junk
+.DS_Store
