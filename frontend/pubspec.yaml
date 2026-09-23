@@ -1,5 +1,5 @@
 name: ncpb_app
-description: NCPB Lease Invoice Manager (MVP)
+description: NCPB Lease Invoice & Store Record Manager
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,6 +12,9 @@ dependencies:
   http: ^1.2.0
   url_launcher: ^6.2.5
   file_picker: ^8.0.0
+  fl_chart: ^0.68.0
+  intl: ^0.19.0
+  csv: ^6.0.0
 
 dev_dependencies:
   flutter_test:

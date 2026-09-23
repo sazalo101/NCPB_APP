@@ -1,26 +1,34 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
-import 'signup_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  final VoidCallback onLoggedIn;
-  const LoginScreen({super.key, required this.onLoggedIn});
+class SignupScreen extends StatefulWidget {
+  final VoidCallback onSignedUp;
+  const SignupScreen({super.key, required this.onSignedUp});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignupScreenState extends State<SignupScreen> {
   final ApiService api = ApiService();
-  final _usernameController = TextEditingController(text: 'admin');
-  final _passwordController = TextEditingController(text: 'admin123');
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _loading = false;
   String? _error;
   bool _obscure = true;
 
-  Future<void> _login() async {
-    if (_usernameController.text.trim().isEmpty || _passwordController.text.isEmpty) {
-      setState(() => _error = 'Please enter username and password');
+  Future<void> _signup() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+    final confirm = _confirmPasswordController.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Username and password are required');
+      return;
+    }
+    if (password != confirm) {
+      setState(() => _error = 'Passwords do not match');
       return;
     }
 
@@ -30,8 +38,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await api.login(_usernameController.text.trim(), _passwordController.text);
-      widget.onLoggedIn();
+      await api.signup(username, password);
+      if (mounted) {
+        Navigator.of(context).pop(); // return to main auth gate
+        widget.onSignedUp();
+      }
     } catch (e) {
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
@@ -41,18 +52,15 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _goToSignup() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SignupScreen(onSignedUp: widget.onLoggedIn),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F9),
+      appBar: AppBar(
+        title: const Text('Staff Registration'),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -72,21 +80,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A),
+                          color: const Color(0xFF1E3A8A),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.warehouse_outlined, size: 36, color: Colors.white),
+                        child: const Icon(Icons.person_add_outlined, size: 36, color: Colors.white),
                       ),
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'NCPB Grain Store Manager',
+                      'Create Staff Account',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Staff Sign-In',
+                      'Register new NCPB staff credentials',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                     ),
@@ -105,7 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextField(
                       controller: _passwordController,
                       obscureText: _obscure,
-                      onSubmitted: (_) => _login(),
                       decoration: InputDecoration(
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
@@ -116,6 +123,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: _obscure,
+                      onSubmitted: (_) => _signup(),
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password',
+                        prefixIcon: const Icon(Icons.lock_reset, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                       ),
                     ),
                     if (_error != null) ...[
@@ -138,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       height: 48,
                       child: FilledButton(
-                        onPressed: _loading ? null : _login,
+                        onPressed: _loading ? null : _signup,
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF1E3A8A),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -148,35 +168,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Sign In', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                            : const Text('Create Account', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Need a staff account? ', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-                        GestureDetector(
-                          onTap: _goToSignup,
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(color: Color(0xFF1E3A8A), fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.blueGrey.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blueGrey.shade100),
-                      ),
-                      child: Text(
-                        'Default Staff Login: admin / admin123',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Back to Sign In'),
                       ),
                     ),
                   ],

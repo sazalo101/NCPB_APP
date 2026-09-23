@@ -14,9 +14,9 @@ class InvoicesScreen extends StatefulWidget {
 class _InvoicesScreenState extends State<InvoicesScreen> {
   final ApiService api = ApiService();
   late Future<List<Invoice>> _invoicesFuture;
-  late Future<List<Customer>> _customersFuture;
+  late Future<List<Client>> _clientsFuture;
 
-  Customer? _selectedCustomer;
+  Client? _selectedClient;
   final _amountController = TextEditingController();
   final _dueDateController = TextEditingController();
   PlatformFile? _pickedFile;
@@ -26,14 +26,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   @override
   void initState() {
     super.initState();
-    _invoicesFuture = api.getInvoices();
-    _customersFuture = api.getCustomers();
+    _refresh();
   }
 
   void _refresh() {
     setState(() {
       _invoicesFuture = api.getInvoices();
-      _customersFuture = api.getCustomers();
+      _clientsFuture = api.getClients();
     });
   }
 
@@ -55,7 +54,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
-      withData: true, // required so bytes are available on Web too
+      withData: true,
     );
     if (result != null && result.files.isNotEmpty) {
       setState(() => _pickedFile = result.files.first);
@@ -63,8 +62,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   Future<void> _uploadInvoice() async {
-    if (_selectedCustomer == null) {
-      setState(() => _error = 'Select a customer');
+    if (_selectedClient == null) {
+      setState(() => _error = 'Select a client');
       return;
     }
     if (_amountController.text.trim().isEmpty) {
@@ -83,7 +82,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
     try {
       await api.addInvoice(
-        customerId: _selectedCustomer!.id,
+        clientId: _selectedClient!.id,
         amount: _amountController.text.trim(),
         dueDate: _dueDateController.text.trim(),
         fileBytes: _pickedFile!.bytes!,
@@ -94,12 +93,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       _dueDateController.clear();
       setState(() {
         _pickedFile = null;
-        _selectedCustomer = null;
+        _selectedClient = null;
       });
       _refresh();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invoice uploaded'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Standard invoice uploaded'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
@@ -114,7 +113,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         prefixIcon: Icon(icon, size: 20),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       );
 
   Widget _buildForm() {
@@ -131,35 +130,35 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.upload_file_outlined, color: Colors.blue.shade700),
+                Icon(Icons.upload_file_outlined, color: const Color(0xFF1E3A8A)),
                 const SizedBox(width: 8),
-                const Text('Upload Invoice', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                const Text('Upload Standard Invoice', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
               ],
             ),
-            const SizedBox(height: 18),
-            FutureBuilder<List<Customer>>(
-              future: _customersFuture,
+            const SizedBox(height: 16),
+            FutureBuilder<List<Client>>(
+              future: _clientsFuture,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const LinearProgressIndicator();
-                final customers = snapshot.data!;
-                if (customers.isEmpty) {
+                final clients = snapshot.data!;
+                if (clients.isEmpty) {
                   return Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.amber.shade50,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text('No customers yet — add one on the Records tab first.'),
+                    child: const Text('No registered clients yet — add one on the Customers tab first.'),
                   );
                 }
-                return DropdownButtonFormField<Customer>(
-                  decoration: _decor('Customer', Icons.person_outline),
-                  value: _selectedCustomer,
+                return DropdownButtonFormField<Client>(
+                  decoration: _decor('Client', Icons.person_outline),
+                  initialValue: _selectedClient,
                   isExpanded: true,
-                  items: customers
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c.name, overflow: TextOverflow.ellipsis)))
+                  items: clients
+                      .map((c) => DropdownMenuItem(value: c, child: Text('${c.name} (${c.id})', overflow: TextOverflow.ellipsis)))
                       .toList(),
-                  onChanged: (value) => setState(() => _selectedCustomer = value),
+                  onChanged: (value) => setState(() => _selectedClient = value),
                 );
               },
             ),
@@ -167,15 +166,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             TextField(
               controller: _amountController,
               keyboardType: TextInputType.number,
-              decoration: _decor('Amount', Icons.attach_money),
+              decoration: _decor('Amount (KES)', Icons.attach_money),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _dueDateController,
               readOnly: true,
               onTap: _pickDueDate,
-              decoration: _decor('Due Date', Icons.calendar_today_outlined)
-                  .copyWith(suffixIcon: const Icon(Icons.arrow_drop_down)),
+              decoration: _decor('Due Date', Icons.calendar_today_outlined).copyWith(suffixIcon: const Icon(Icons.arrow_drop_down)),
             ),
             const SizedBox(height: 12),
             InkWell(
@@ -185,8 +183,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: _pickedFile != null ? Colors.blue.shade200 : Colors.grey.shade300,
-                    style: BorderStyle.solid,
+                    color: _pickedFile != null ? const Color(0xFF1E3A8A) : Colors.grey.shade300,
                   ),
                   borderRadius: BorderRadius.circular(10),
                   color: _pickedFile != null ? Colors.blue.shade50 : null,
@@ -194,14 +191,15 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 child: Row(
                   children: [
                     Icon(Icons.picture_as_pdf_outlined,
-                        color: _pickedFile != null ? Colors.blue.shade700 : Colors.grey.shade500),
+                        color: _pickedFile != null ? const Color(0xFF1E3A8A) : Colors.grey.shade500),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        _pickedFile?.name ?? 'Tap to choose a PDF invoice',
+                        _pickedFile?.name ?? 'Tap to choose a PDF invoice file',
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: _pickedFile != null ? Colors.blue.shade900 : Colors.grey.shade600,
+                          color: _pickedFile != null ? const Color(0xFF1E3A8A) : Colors.grey.shade600,
+                          fontWeight: _pickedFile != null ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -230,8 +228,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                         width: 16, height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.upload),
-                label: Text(_uploading ? 'Uploading...' : 'Upload Invoice'),
+                label: Text(_uploading ? 'Uploading...' : 'Upload Invoice PDF'),
                 style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
@@ -249,7 +248,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Invoices', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            const Text('Uploaded Invoices', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
             IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
           ],
         ),
@@ -279,7 +278,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                     children: [
                       Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey.shade400),
                       const SizedBox(height: 8),
-                      Text('No invoices yet', style: TextStyle(color: Colors.grey.shade600)),
+                      Text('No uploaded invoices yet.', style: TextStyle(color: Colors.grey.shade600)),
                     ],
                   ),
                 ),
@@ -293,7 +292,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               itemBuilder: (context, index) {
                 final inv = invoices[index];
                 final isPending = inv.status == 'pending';
-                final statusColor = isPending ? Colors.orange : Colors.green;
+                final statusColor = isPending ? Colors.orange.shade800 : Colors.green.shade800;
                 return Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -310,16 +309,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                             color: Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Icons.picture_as_pdf_outlined, color: Colors.blue.shade700),
+                          child: const Icon(Icons.picture_as_pdf_outlined, color: Color(0xFF1E3A8A)),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(inv.customerName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              Text(inv.clientName, style: const TextStyle(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 2),
-                              Text('Amount: ${inv.amount}${inv.dueDate.isNotEmpty ? '  •  Due: ${inv.dueDate}' : ''}',
+                              Text('Amount: KES ${inv.amount}${inv.dueDate.isNotEmpty ? '  •  Due: ${inv.dueDate}' : ''}',
                                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                             ],
                           ),
@@ -336,8 +335,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                             }
                           },
                           icon: const Icon(Icons.open_in_new, size: 20),
-                          tooltip: 'View invoice',
+                          tooltip: 'View PDF Invoice',
                         ),
+                        const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -365,7 +365,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 800;
+        final isWide = constraints.maxWidth > 850;
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: isWide
